@@ -10,8 +10,8 @@
 #define SS_PIN 21
 
 // Credenciais Wi-Fi
-const char* ssid = "AKVA";
-const char* password = "flipflop_";
+const char* ssid = "inserirSSID";
+const char* password = "inserirpassword";
 
 // Configuração do broker MQTT
 const char* mqtt_server = "broker.emqx.io";  // Endereço do broker MQTT
