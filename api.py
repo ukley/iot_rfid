@@ -8,9 +8,9 @@ app = Flask(__name__)
 # Exemplo de dados para simular o banco de dados
 data = {
     "users": [
-        {"proprietario": "ANDRE KLEY", "car_placa": "ABC1234"},
-        {"proprietario": "Von Neumann ", "car_placa": "DEF5678"},
-        {"proprietario": "PATRICIA FERNANDES", "car_placa": "FOO3290"}
+        {"tag":"4A:92:BC:3F","proprietario": "Felipe Costa", "car_placa": "ABC1234", "car_modelo": "Fiat Uno","cor":"Azul"},
+        {"tag":"1E:34:89:7A","proprietario": "Carlos Eduardo da Silva ", "car_placa": "PWL1120", "car_modelo": "Fiat Palio","cor":"Preto"},
+        {"tag":"D5:56:4C:A1","proprietario": "Mariana Oliveira Santos", "car_placa": "FOO3290", "car_modelo": "Ford Ka","cor":"Branco"},
     ]
 }
 
@@ -50,7 +50,7 @@ def receber_placa():
         plate = request.args.get('placa')
         print(f"Placa recebida: {plate}")      
                 
-        db.insert({ 'tag':'xx xx xx xx', 'placa': plate, 'latitude':'37.533772','longitude':'-95.830994','data_hora': str(datetime.now())})
+        db.insert({ 'tag':"4A:92:BC:3F", 'placa': plate, 'data_hora': str(datetime.now())})
 
         # Verifica se o parâmetro 'placa' foi fornecido
         if not plate:
