@@ -1,6 +1,9 @@
 from flask import Flask, jsonify, request
 from tinydb import TinyDB, Query
 from datetime import datetime, date, time, timedelta
+import paho.mqtt.client as mqtt
+import requests
+
 
 
 app = Flask(__name__)
@@ -42,50 +45,34 @@ def get_dados_veiculo():
         "data": user
     })
     
-@app.route('/api/dado', methods=['GET'])
-def receber_placa():
+def receber_placa(placa):
     db = TinyDB('db.json')
-    try:
-        # Obtém o parâmetro 'placa' da requisição
-        plate = request.args.get('placa')
-        print(f"Placa recebida: {plate}")      
-                
-        db.insert({ 'tag':"4A:92:BC:3F", 'placa': plate, 'data_hora': str(datetime.now())})
+                                    
+    db.insert({ 'placa': placa, 'data_hora': str(datetime.now())})       
 
-        # Verifica se o parâmetro 'placa' foi fornecido
-        if not plate:
-            return jsonify({
-                "status": "error",
-                "message": "Parametro 'placa' e obrigatorio"
-            }), 400
+# Define as funções de callback
+def on_connect(client, userdata, flags, rc):
+    print(f"Conectado com código {rc}")
+    client.subscribe("veiculosro/placa")  # Substitua pelo seu tópico
 
-        # render db.json
-        # db = TinyDB('db.json')
-        print(db.all())
-        print(db.search(Query().placa == plate))
-       
-        
-        # Procura o usuário com base na placa
-        user = next((user for user in data["users"] if user["car_placa"] == plate), None)
+def on_message(client, userdata, msg):
+    print(f"{msg.payload.decode()}")
+    placa = msg.payload.decode()
+    
+    receber_placa(placa)     
+    
+# Cria um cliente MQTT
+client = mqtt.Client()
 
-        # Se não encontrar o usuário, retorna erro
-        if not user:
-            return jsonify({
-                "status": "error",
-                "message": "Placa não encontrado "
-            }), 404
+# Configura as funções de callback
+client.on_connect = on_connect
+client.on_message = on_message
 
-        # Retorna os dados do usuário
-        return jsonify({           
-            "data": user
-        }), 200
+# Conecta-se ao broker
+client.connect("broker.emqx.io", 1883, 60)  # Substitua pelo endereço e porta do seu broker
 
-    except Exception as e:
-        # Em caso de erro, retorna uma mensagem com o erro
-        return jsonify({
-            "status": "error",
-            "message": f"Erro no servidor: {str(e)}"
-        }), 500    
+# Mantém o cliente em execução para receber mensagens
+client.loop_forever()
 
 
 if __name__ == '__main__':
