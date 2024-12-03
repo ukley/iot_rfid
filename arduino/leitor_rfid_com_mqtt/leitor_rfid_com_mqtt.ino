@@ -3,7 +3,6 @@
 #include <MFRC522.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
-#include <HTTPClient.h>
 
 
 // Pinos do MFRC522
@@ -11,16 +10,13 @@
 #define SS_PIN 21
 
 // Credenciais Wi-Fi
-const char* ssid = "###";
-const char* password = "###";
+const char* ssid = "AKVA";
+const char* password = "flipflop_";
 
 // Configuração do broker MQTT
 const char* mqtt_server = "broker.emqx.io";  // Endereço do broker MQTT
 const int mqtt_port = 1883;                   // Porta do broker MQTT (padrão: 1883)
 const char* placa_topic = "veiculosro/placa";   // Tópico MQTT para envio da placa
-
-// URL do endpoint Flask (ajuste conforme necessário) ngrok
-String url = "https://71df-2804-2860-6023-f000-39d-2208-edfc-5296.ngrok-free.app/api/dados/placa";  // Local do seu servidor Flask
 
 
 WiFiClient espClient;         // Cliente Wi-Fi
@@ -75,6 +71,14 @@ void loop() {
     return;
   }
 
+   // Obter o UID da tag
+  String tagID = "";
+  for (byte i = 0; i < mfrc522.uid.size; i++) {
+    tagID += String(mfrc522.uid.uidByte[i], HEX); // Converte cada byte do UID para hexadecimal
+    if (i < mfrc522.uid.size - 1) tagID += ":";  // Adiciona ':' como separador
+  }
+
+
   // Lê os dados do bloco
   byte buffer[18]; // Buffer para armazenar os dados
   byte bufferSize = sizeof(buffer);
@@ -86,22 +90,22 @@ void loop() {
       placa += (char)buffer[i]; // Concatena os caracteres lidos na string
     }
 
+    String tag_placa_topic = tagID+"|"+placa;
+    
+
     // Conecta ao broker MQTT
     while (!client.connected()) {
       Serial.println("Conectando ao broker MQTT...");
       if (client.connect("ESP32Client")) {
         Serial.println("Conectado ao broker MQTT!");
-        client.publish(placa_topic, placa.c_str()); // Publica a placa no tópico configurado
-        Serial.println(placa);
+        client.publish(placa_topic, tag_placa_topic.c_str()); // Publica a placa no tópico configurado
+        Serial.println();
       } else {
         Serial.print("Falha na conexão. Estado: ");
         Serial.println(client.state());
         delay(2000);
       }
-    }
-  
-    // Envia a placa para a API via POST
-    gravarTrackingVeiculo(placa);
+    }      
 
   } else {
     Serial.print("Erro ao ler: ");
@@ -115,59 +119,3 @@ void loop() {
   client.loop(); // Processa mensagens MQTT, se houver
 }
 
-void enviarPlacaParaApi(String placa) {
-    HTTPClient http;
-
-    // URL da API com a placa como parâmetro
-    String url = "https://71df-2804-2860-6023-f000-39d-2208-edfc-5296.ngrok-free.app/api/users/placa?placa="+placa;
-
-    Serial.println(url);
-
-    // Inicia a conexão com a API
-    http.begin(url);
-    http.addHeader("Content-Type", "application/json");  // Adiciona o cabeçalho
-
-    // Faz a requisição GET
-    int httpCode = http.GET();
-
-    // Verifica o código de retorno
-    if (httpCode > 0) {
-        Serial.printf("HTTP Status Code: %d\n", httpCode);
-
-        // Lê a resposta da API
-        String payload = http.getString();
-        Serial.println("Resposta da API:");
-        Serial.println(payload);
-    } else {
-        Serial.printf("Erro na requisição: %s\n", http.errorToString(httpCode).c_str());
-    }
-
-    http.end(); // Finaliza a conexão HTTP
-}
-
-void gravarTrackingVeiculo(String placa) {
-    HTTPClient http;  // Objeto para gerenciar a requisição HTTP
-
-    String url = "https://670c-2804-2860-6023-f000-39d-2208-edfc-5296.ngrok-free.app/api/dado?placa="+placa;
-
-    // Inicia a conexão com a API
-    http.begin(url);
-    http.addHeader("Content-Type", "application/json");  // Adiciona o cabeçalho
-
-    // Faz a requisição GET
-    int httpCode = http.GET();
-
-    // Verifica o código de retorno
-    if (httpCode > 0) {
-        Serial.printf("HTTP Status Code: %d\n", httpCode);
-
-        // Lê a resposta da API
-        String payload = http.getString();
-        Serial.println("Resposta da API:");
-        Serial.println(payload);
-    } else {
-        Serial.printf("Erro na requisição: %s\n", http.errorToString(httpCode).c_str());
-    }
-
-    http.end(); // Finaliza a conexão HTTP  
-}
